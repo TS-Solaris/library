@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: library
+  docker:
+    compose:
+      file: "./docker/docker-compose.yml"
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: library
+    password: library
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: false

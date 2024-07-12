@@ -1,8 +1,17 @@
+buildscript {
+    dependencies {
+        classpath 'org.flywaydb:flyway-database-postgresql:10.15.0'
+    }
+}
+
 plugins {
     id 'org.springframework.boot' version '3.3.1'
     id 'io.spring.dependency-management' version '1.1.5'
     id 'org.jetbrains.kotlin.jvm' version '1.9.24'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.9.24'
+    id 'org.jmailen.kotlinter' version '4.4.0'
+    id 'org.jooq.jooq-codegen-gradle' version '3.19.10'
+    id 'org.flywaydb.flyway' version '10.15.0'
 }
 
 group = 'org.example'
@@ -20,14 +29,15 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jooq'
-    implementation 'org.flywaydb:flyway-core'
-    implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql:10.15.0'
     runtimeOnly 'org.postgresql:postgresql'
+    jooqCodegen 'org.postgresql:postgresql'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    runtimeOnly 'org.springframework.boot:spring-boot-docker-compose'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -39,4 +49,47 @@ kotlin {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+flywayMigrate.finalizedBy jooqCodegen
+jooqCodegen.finalizedBy formatKotlinMain
+
+flyway {
+    url = 'jdbc:postgresql://localhost:5432/postgres'
+    user = 'library'
+    password = 'library'
+    schemas = ['public']
+    cleanDisabled = false
+}
+
+jooq {
+    configuration {
+        jdbc {
+            driver = 'org.postgresql.Driver'
+            url = 'jdbc:postgresql://localhost:5432/postgres'
+            user = 'library'
+            password = 'library'
+            schema = 'public'
+        }
+        generator {
+            name = 'org.jooq.codegen.KotlinGenerator'
+            database {
+                name = 'org.jooq.meta.postgres.PostgresDatabase'
+                inputSchema = 'public'
+                includes = '.*'
+                excludes = 'flyway_schema_history'
+            }
+            target {
+                packageName = 'org.example.library.infra.jooq'
+                directory = 'src/main/kotlin'
+            }
+            generate {
+                kotlinNotNullPojoAttributes = true
+                kotlinNotNullRecordAttributes = true
+                kotlinNotNullInterfaceAttributes = true
+                kotlinDefaultedNullablePojoAttributes = false
+                kotlinDefaultedNullableRecordAttributes = false
+            }
+        }
+    }
 }
